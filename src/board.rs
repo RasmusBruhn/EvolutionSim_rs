@@ -1,4 +1,3 @@
-use anyhow::{Context, Result};
 use thiserror::Error;
 
 /// Defines the board on which the plants evolve
@@ -95,12 +94,12 @@ impl Fields {
     /// assert_eq!([0.0, 1.5, 2.3, 3.9].to_vec(), fields.light);
     /// assert_eq!(size, fields.size);
     /// ```
-    pub fn new(size: Size, light: &[f32]) -> Result<Self> {
+    pub fn new(size: Size, light: &[f32]) -> Result<Self, FieldCreateError> {
         // Make sure the fields are the correct size
         let len = size.len();
 
         if light.len() != len {
-            return Err(BoardError::FieldSize {len: light.len(), size}).context("Unable to create a new field due to light field");
+            return Err(FieldCreateError::Size {name: "Light".to_string(), len: light.len(), size});
         }
 
         let light = light.to_vec();
@@ -171,10 +170,11 @@ impl Size {
     }
 }
 
-#[derive(Clone, Copy, Error, Debug, PartialEq)]
-pub enum BoardError {
-    #[error("Field has wrong size ({:?}) should be ({:?}) on board with size {:?}", len, size.len(), size)]
-    FieldSize {
+#[derive(Clone, Error, Debug, PartialEq)]
+pub enum FieldCreateError {
+    #[error("{:?} field has wrong size ({:?}) should be ({:?}) on board with size {:?}", name, len, size.len(), size)]
+    Size {
+        name: String,
         len: usize,
         size: Size,
     },
@@ -209,7 +209,7 @@ mod tests {
     }
 
     #[test]
-    fn fields_new() -> Result<()> {
+    fn fields_new() -> Result<(), FieldCreateError> {
         let size = Size::new(2, 2);
         let light_field = [1.0, 2.0, 3.0, 4.0];
         let fields = Fields::new(size, &light_field)?;
@@ -227,6 +227,7 @@ mod tests {
         let fields = Fields::new(size, &light_field);
 
         assert!(fields.is_err());
+        assert_eq!(FieldCreateError::Size {name: "Light".to_string(), len: 3, size}, fields.unwrap_err())
     }
 
     #[test]
